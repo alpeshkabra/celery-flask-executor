@@ -1,0 +1,31 @@
+version: '3'
+services:
+  redis:
+    image: "redis:latest"
+    container_name: redis
+    ports:
+      - "6379:6379"
+
+  web:
+    build: .
+    container_name: flask_app
+    ports:
+      - "5000:5000"
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - FLASK_APP=flask_app.app:app
+    command: flask run --host=0.0.0.0
+    depends_on:
+      - redis
+
+  worker:
+    build: .
+    container_name: celery_worker
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    command: celery -A celery_worker.celery worker --loglevel=info
+    depends_on:
+      - redis
+      - web
